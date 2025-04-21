@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Khởi tạo bot
-API_TOKEN = os.getenv('AAELl1ulqvMjNablJrnfGH6UxweDMG3FPRA')  # Lấy token từ biến môi trường
+API_TOKEN = os.getenv('7630045853:AAELl1ulqvMjNablJrnfGH6UxweDMG3FPRA')  # Lấy token từ biến môi trường
 if not API_TOKEN:
     logger.error("TELEGRAM_BOT_TOKEN không được thiết lập!")
     exit(1)
