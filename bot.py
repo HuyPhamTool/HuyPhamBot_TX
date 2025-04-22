@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Khởi tạo bot
-API_TOKEN = '7630045853:AAELl1ulqvMjNablJrnfGH6UxweDMG3FPRA'  # Thay bằng token thực của bạn
+API_TOKEN = '7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8'  # Thay bằng token thực của bạn
 bot = telebot.TeleBot(API_TOKEN)
 ADMIN_ID = 7505331567  # Thay bằng ID Telegram của admin
 CALLS_PER_MINUTE = 10
