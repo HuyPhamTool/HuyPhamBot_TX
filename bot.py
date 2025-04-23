@@ -6,9 +6,9 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # Cấu hình
-API_TOKEN = 'YOUR_BOT_TOKEN'
-ADMIN_IDS = [123456789]  # ID Admin
-PREMIUM_COST = 100000  # Phí premium/tháng (VND)
+API_TOKEN = '7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8'
+ADMIN_IDS = [7505331567]  # ID Admin
+PREMIUM_COST = 500000  # Phí premium/tháng (VND)
 
 # Khởi tạo
 bot = telebot.TeleBot(API_TOKEN)
