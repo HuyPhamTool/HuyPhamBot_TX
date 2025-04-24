@@ -1,105 +1,86 @@
-# Bot Telegram phan tich Tai/Xiu tu ma MD5 + kiem tra key khi bat dau
-# Yeu cau: pip install python-telegram-bot
-
-import hashlib
-import random
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+import random, string
 
-# ========== Cau hinh ==========
-BOT_TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # Thay bang token bot Telegram cua ban
-ADMIN_PASSWORD = "7505331567"   # Mat khau truy cap admin
-VALID_KEYS = ["key123", "vip456"]  # Danh sach key cho phep
+# Danh sách key hợp lệ (giả lập) và key của admin
+valid_keys = {"key123", "vipkey456"}
+admin_id = 7505331567  # Thay bằng Telegram user ID thật của bạn
 
-user_keys = {}   # Luu key da nhap theo user_id
-admin_ids = set()  # Luu ID cua admin da dang nhap
+# Lưu người dùng đã nhập key
+user_keys = {}
 
-# ========== Ham xu ly ==========
-def md5_hash(s):
-    return hashlib.md5(s.encode()).hexdigest()
-
+# Phân tích mã MD5 ra Tài/Xỉu
 def phan_tich_md5(md5_code):
     try:
-        hex_part = md5_code[-5:]  # lấy 5 ký tự cuối
-        decimal = int(hex_part, 16)  # chuyển sang hệ 10
-        last_digits = [int(x) for x in str(decimal)[-3:]]  # 3 số cuối
-        total = sum(last_digits)
+        hex_part = md5_code[-5:]
+        decimal = int(hex_part, 16)
+        digits = [int(d) for d in str(decimal)[-3:]]
+        total = sum(digits)
         result = "Tài" if total >= 11 else "Xỉu"
         return (
-            f"🔍 Phân tích MD5: {md5_code}\n"
-            f"📦 Hex cuối: {hex_part} → {decimal}\n"
-            f"🎲 3 số cuối: {' + '.join(map(str, last_digits))} = {total}\n"
+            f"🎲 Phân tích MD5: {md5_code}\n"
+            f"➡ Hex cuối: {hex_part} → {decimal}\n"
+            f"➡ 3 số cuối: {' + '.join(map(str, digits))} = {total}\n"
             f"🎯 Kết quả: {result}"
         )
     except:
-        return "⚠️ Không thể phân tích mã MD5. Hãy kiểm tra lại."
+        return "⚠️ Mã MD5 không hợp lệ."
 
-
-# ========== Xu ly lenh ==========
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# /start
+def start(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if user_id in user_keys:
-        await update.message.reply_text(
-            "\U0001f916 Nhập mã MD5 cần phân tích:")
-        context.user_data['mode'] = 'phan_tich'
+        update.message.reply_text("✅ Bạn đã kích hoạt key. Gửi mã MD5 để phân tích.")
     else:
-        await update.message.reply_text("\U0001f511 Vui lòng nhập key truy cập:")
-        context.user_data['mode'] = 'nhap_key'
+        update.message.reply_text("🔐 Nhập key để sử dụng bot. Gõ: /key <mã_key>")
 
-async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔐 Gửi mật khẩu admin:")
-    context.user_data['mode'] = 'admin_login'
-
-async def tao_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# /key <mã_key>
+def nhap_key(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
-    if user_id in admin_ids:
-        key = f"key_{random.randint(10000,99999)}"
-        VALID_KEYS.append(key)
-        await update.message.reply_text(f"🔑 Key mới: {key}")
+    if len(context.args) == 0:
+        update.message.reply_text("❗ Dùng: /key <mã_key>")
+        return
+    key = context.args[0]
+    if key in valid_keys:
+        user_keys[user_id] = key
+        update.message.reply_text("✅ Kích hoạt key thành công! Gửi mã MD5 để phân tích.")
     else:
-        await update.message.reply_text("❌ Bạn không phải admin!")
+        update.message.reply_text("❌ Key không hợp lệ.")
 
-# ========== Xu ly tin nhan ==========
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# /taokey (admin)
+def tao_key(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    if user_id != admin_id:
+        update.message.reply_text("🚫 Bạn không có quyền tạo key.")
+        return
+    new_key = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    valid_keys.add(new_key)
+    update.message.reply_text(f"🔑 Key mới: `{new_key}`", parse_mode="Markdown")
+
+# Phân tích MD5 khi người dùng gửi
+def xu_ly_md5(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = update.message.text.strip()
-
-    if context.user_data.get('mode') == 'nhap_key':
-        if text in VALID_KEYS:
-            user_keys[user_id] = text
-            await update.message.reply_text("✅ Nhập key thành công! Nhập mã MD5 cần phân tích:")
-            context.user_data['mode'] = 'phan_tich'
-        else:
-            await update.message.reply_text("❌ Key không hợp lệ. Vui lòng thử lại")
-
-    elif context.user_data.get('mode') == 'phan_tich':
-        md5_code = text.lower()
-        if len(md5_code) != 32:
-            await update.message.reply_text("⚠️ Mã MD5 phải đủ 32 ký tự")
-            return
-        await update.message.reply_text("⏳ Đang phân tích...")
-        result = phan_tich_md5(md5_code)
-        await update.message.reply_text(result)
-
-    elif context.user_data.get('mode') == 'admin_login':
-        if text == ADMIN_PASSWORD:
-            admin_ids.add(user_id)
-            await update.message.reply_text("✅ Đăng nhập admin thành công")
-        else:
-            await update.message.reply_text("❌ Sai mật khẩu")
-        context.user_data.clear()
-
+    if user_id not in user_keys:
+        update.message.reply_text("🔐 Bạn cần nhập key trước. Gõ: /key <mã_key>")
+        return
+    if len(text) == 32 and all(c in string.hexdigits for c in text):
+        kq = phan_tich_md5(text)
+        update.message.reply_text(kq)
     else:
-        await update.message.reply_text("❓ Dùng /start để bắt đầu")
+        update.message.reply_text("⚠️ Hãy gửi đúng 1 mã MD5 (32 ký tự).")
 
-# ========== Main ==========
+def main():
+    updater = Updater("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8", use_context=True)  # Thay bằng token thật
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("key", nhap_key))
+    dp.add_handler(CommandHandler("taokey", tao_key))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, xu_ly_md5))
+
+    updater.start_polling()
+    updater.idle()
+
 if __name__ == '__main__':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("admin", admin))
-    app.add_handler(CommandHandler("tao_key", tao_key))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-
-    print("\U0001f680 Bot Tài/Xỉu Telegram đang chạy...")
-    app.run_polling()
+    main()
