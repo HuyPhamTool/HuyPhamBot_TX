@@ -7,8 +7,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # ========== Cau hinh ==========
-BOT_TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8
-"  # Thay bang token bot Telegram cua ban
+BOT_TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # Thay bang token bot Telegram cua ban
 ADMIN_PASSWORD = "7505331567"   # Mat khau truy cap admin
 VALID_KEYS = ["key123", "vip456"]  # Danh sach key cho phep
 
