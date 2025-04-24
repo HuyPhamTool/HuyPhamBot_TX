@@ -1,86 +1,109 @@
+import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-import random, string
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    ContextTypes, filters
+)
 
-# Danh sách key hợp lệ (giả lập) và key của admin
-valid_keys = {"key123", "vipkey456"}
-admin_id = 7505331567  # Thay bằng Telegram user ID thật của bạn
+# Thiết lập log
+logging.basicConfig(level=logging.INFO)
 
-# Lưu người dùng đã nhập key
-user_keys = {}
+# Token bot Telegram
+TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"
 
-# Phân tích mã MD5 ra Tài/Xỉu
-# Phân tích mã MD5 ra Tài/Xỉu
-def phan_tich_md5(md5_code):
+# Danh sách user đã được admin kích hoạt
+authorized_users = set()
+
+# Thống kê cá nhân: {user_id: {"win": int, "lose": int}}
+user_stats = {}
+
+# ID của Admin
+ADMIN_ID = 7505331567  
+
+# Hàm phân tích MD5 ra Tài/Xỉu
+def analyze_md5(md5: str) -> (str, int):
     try:
-        hex_part = md5_code[-5:]
+        hex_part = md5[-5:]
         decimal = int(hex_part, 16)
         digits = [int(d) for d in str(decimal)[-3:]]
         total = sum(digits)
         result = "Tài" if total >= 11 else "Xỉu"
-        return (
-            f"🎲 Phân tích MD5: {md5_code}\n"
-            f"➡ Hex cuối: {hex_part} → {decimal}\n"
-            f"➡ 3 số cuối: {' + '.join(map(str, digits))} = {total}\n"
-            f"🎯 Kết quả: {result}"
-        )
+        return result, total
     except:
-        return "⚠️ Mã MD5 không hợp lệ."
+        return "Lỗi", 0
 
-
-# /start
-async def start(update: Update, context: CallbackContext):
+# Xử lý lệnh /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id in user_keys:
-        await update.message.reply_text("✅ Bạn đã kích hoạt key. Gửi mã MD5 để phân tích.")
+    if user_id not in authorized_users:
+        await update.message.reply_text(
+            "🔒 Bạn chưa được kích hoạt. Vui lòng chờ admin!"
+        )
     else:
-        await update.message.reply_text("🔐 Nhập key để sử dụng bot. Gõ: /key <mã_key>")
+        await update.message.reply_text("✅ Bạn đã được kích hoạt. Gửi mã MD5 để phân tích!")
 
-# /key <mã_key>
-async def nhap_key(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    if len(context.args) == 0:
-        await update.message.reply_text("❗ Dùng: /key <mã_key>")
+# Lệnh cho admin: /active <user_id>
+async def active(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("🚫 Bạn không có quyền dùng lệnh này.")
         return
-    key = context.args[0]
-    if key in valid_keys:
-        user_keys[user_id] = key
-        await update.message.reply_text("✅ Kích hoạt key thành công! Gửi mã MD5 để phân tích.")
-    else:
-        await update.message.reply_text("❌ Key không hợp lệ.")
 
-# /taokey (admin)
-async def tao_key(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    if user_id != admin_id:
-        await update.message.reply_text("🚫 Bạn không có quyền tạo key.")
-        return
-    new_key = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    valid_keys.add(new_key)
-    await update.message.reply_text(f"🔑 Key mới: `{new_key}`", parse_mode="Markdown")
+    try:
+        target_id = int(context.args[0])
+        authorized_users.add(target_id)
+        await update.message.reply_text(f"✅ Đã kích hoạt cho user ID: {target_id}")
+    except:
+        await update.message.reply_text("❌ Lỗi! Dùng đúng cú pháp: /active <user_id>")
 
 # Phân tích MD5 khi người dùng gửi
-async def xu_ly_md5(update: Update, context: CallbackContext):
+async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
-    if user_id not in user_keys:
-        await update.message.reply_text("🔐 Bạn cần nhập key trước. Gõ: /key <mã_key>")
+
+    if user_id not in authorized_users:
+        await update.message.reply_text("❌ Bạn chưa được kích hoạt. Chờ admin duyệt.")
         return
-    if len(text) == 32 and all(c in string.hexdigits for c in text):
-        kq = phan_tich_md5(text)
-        await update.message.reply_text(kq)
+
+    if len(text) != 32 or not all(c in "0123456789abcdef" for c in text.lower()):
+        await update.message.reply_text("⚠️ Mã MD5 không hợp lệ. Vui lòng gửi mã hợp lệ.")
+        return
+
+    result, total = analyze_md5(text)
+    if result == "Lỗi":
+        await update.message.reply_text("❌ Phân tích thất bại. Hãy thử lại.")
+        return
+
+    # Thống kê thắng/thua
+    stats = user_stats.get(user_id, {"win": 0, "lose": 0})
+    if result == "Tài":
+        stats["win"] += 1
     else:
-        await update.message.reply_text("⚠️ Hãy gửi đúng 1 mã MD5 (32 ký tự).")
+        stats["lose"] += 1
 
+    total_games = stats["win"] + stats["lose"]
+    win_rate = (stats["win"] / total_games) * 100 if total_games > 0 else 0
+    user_stats[user_id] = stats
+
+    await update.message.reply_text(
+        f"🎲 Mã MD5: {text}\n"
+        f"🔍 Tổng cuối: {total}\n"
+        f"🎯 Kết quả: {result}\n\n"
+        f"📊 Thống kê:\n"
+        f"- Tài: {stats['win']}\n"
+        f"- Xỉu: {stats['lose']}\n"
+        f"- Tỷ lệ thắng: {win_rate:.2f}%"
+    )
+
+# Khởi tạo bot
 def main():
-    application = Application.builder().token("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8").build()  # Thay bằng token thật
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("key", nhap_key))
-    application.add_handler(CommandHandler("taokey", tao_key))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, xu_ly_md5))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("active", active))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), analyze))
 
-    application.run_polling()
+    print("🤖 Bot đang chạy...")
+    app.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
