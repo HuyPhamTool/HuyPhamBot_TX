@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import random, string
 
 # Danh sách key hợp lệ (giả lập) và key của admin
@@ -27,60 +27,58 @@ def phan_tich_md5(md5_code):
         return "⚠️ Mã MD5 không hợp lệ."
 
 # /start
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if user_id in user_keys:
-        update.message.reply_text("✅ Bạn đã kích hoạt key. Gửi mã MD5 để phân tích.")
+        await update.message.reply_text("✅ Bạn đã kích hoạt key. Gửi mã MD5 để phân tích.")
     else:
-        update.message.reply_text("🔐 Nhập key để sử dụng bot. Gõ: /key <mã_key>")
+        await update.message.reply_text("🔐 Nhập key để sử dụng bot. Gõ: /key <mã_key>")
 
 # /key <mã_key>
-def nhap_key(update: Update, context: CallbackContext):
+async def nhap_key(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if len(context.args) == 0:
-        update.message.reply_text("❗ Dùng: /key <mã_key>")
+        await update.message.reply_text("❗ Dùng: /key <mã_key>")
         return
     key = context.args[0]
     if key in valid_keys:
         user_keys[user_id] = key
-        update.message.reply_text("✅ Kích hoạt key thành công! Gửi mã MD5 để phân tích.")
+        await update.message.reply_text("✅ Kích hoạt key thành công! Gửi mã MD5 để phân tích.")
     else:
-        update.message.reply_text("❌ Key không hợp lệ.")
+        await update.message.reply_text("❌ Key không hợp lệ.")
 
 # /taokey (admin)
-def tao_key(update: Update, context: CallbackContext):
+async def tao_key(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     if user_id != admin_id:
-        update.message.reply_text("🚫 Bạn không có quyền tạo key.")
+        await update.message.reply_text("🚫 Bạn không có quyền tạo key.")
         return
     new_key = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
     valid_keys.add(new_key)
-    update.message.reply_text(f"🔑 Key mới: `{new_key}`", parse_mode="Markdown")
+    await update.message.reply_text(f"🔑 Key mới: `{new_key}`", parse_mode="Markdown")
 
 # Phân tích MD5 khi người dùng gửi
-def xu_ly_md5(update: Update, context: CallbackContext):
+async def xu_ly_md5(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = update.message.text.strip()
     if user_id not in user_keys:
-        update.message.reply_text("🔐 Bạn cần nhập key trước. Gõ: /key <mã_key>")
+        await update.message.reply_text("🔐 Bạn cần nhập key trước. Gõ: /key <mã_key>")
         return
     if len(text) == 32 and all(c in string.hexdigits for c in text):
         kq = phan_tich_md5(text)
-        update.message.reply_text(kq)
+        await update.message.reply_text(kq)
     else:
-        update.message.reply_text("⚠️ Hãy gửi đúng 1 mã MD5 (32 ký tự).")
+        await update.message.reply_text("⚠️ Hãy gửi đúng 1 mã MD5 (32 ký tự).")
 
 def main():
-    updater = Updater("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8", use_context=True)  # Thay bằng token thật
-    dp = updater.dispatcher
+    application = Application.builder().token("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8").build()  # Thay bằng token thật
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("key", nhap_key))
-    dp.add_handler(CommandHandler("taokey", tao_key))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, xu_ly_md5))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("key", nhap_key))
+    application.add_handler(CommandHandler("taokey", tao_key))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, xu_ly_md5))
 
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
