@@ -1,104 +1,95 @@
+# Bot Telegram phan tich Tai/Xiu tu ma MD5 + quan ly secret_key (admin)
+# Yeu cau: pip install python-telegram-bot
+
+import hashlib
+import random
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import hashlib
-from itertools import product
-import random
 
-# Giao diện menu
-main_menu = ReplyKeyboardMarkup([["/phantich", "/dukien"]], resize_keyboard=True)
+# ========== Cau hinh ==========
+BOT_TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # Thay bang token bot Telegram cua ban
+ADMIN_PASSWORD = "admin1234"   # Mat khau truy cap admin
 
-# Hàm hash MD5
+admin_ids = set()  # Luu ID cua admin da dang nhap
+secret_keys = []   # Danh sach cac secret_key da tao
+
+# ========== Ham xu ly ==========
 def md5_hash(s):
     return hashlib.md5(s.encode()).hexdigest()
 
-# Phân tích MD5 nếu có key
-def crack_md5(md5_target, secret_key):
-    for combo in product(range(1, 7), repeat=3):
-        test_str = f"{combo[0]},{combo[1]},{combo[2]}|{secret_key}"
-        if md5_hash(test_str) == md5_target:
-            total = sum(combo)
-            return f"""
-🎲 Xúc xắc: {combo}
-➕ Tổng: {total}
-📌 Kết quả: {"Tài" if total >= 11 else "Xỉu"}
-🔐 Chuỗi: {test_str}
-"""
+def phan_tich_md5(md5_target, secret_key):
+    for x in range(1, 7):
+        for y in range(1, 7):
+            for z in range(1, 7):
+                raw = f"{x},{y},{z}|{secret_key}"
+                if md5_hash(raw) == md5_target:
+                    total = x + y + z
+                    kq = "Tài" if total >= 11 else "Xỉu"
+                    return f"\U0001f3b2 Xúc xắc: {x}, {y}, {z}\nTổng: {total} => \U0001f4c8 {kq}"
     return "❌ Không tìm thấy kết quả phù hợp."
 
-# AI dự đoán kết quả từ lịch sử
-def smart_predict(history):
-    if not history:
-        return "🤔 Bạn chưa có lịch sử để dự đoán!"
-    count_tai = sum(1 for x in history if x >= 11)
-    count_xiu = len(history) - count_tai
-    if count_xiu > count_tai:
-        return "🔮 Dự đoán: **Tài** (theo xu hướng gần đây)"
-    else:
-        return "🔮 Dự đoán: **Xỉu** (theo xu hướng gần đây)"
-
-# /start
+# ========== Xu ly lenh ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 Xin chào! Bot hỗ trợ phân tích tài/xỉu từ mã MD5.\n\n"
-        "📌 Gửi /phantich để phân tích từ MD5 + secret_key.\n"
-        "📈 Gửi /dukien để bot dự đoán Tài/Xỉu theo lịch sử.\n",
-        reply_markup=main_menu
+        "\U0001f916 Xin chào! Bot phân tích Tài/Xỉu từ mã MD5\n"
+        "\nLệnh dùng:\n/phan_tich - Nhập MD5 và secret_key\n/admin - Đăng nhập admin\n/tao_key - Tạo key (admin)",
     )
 
-# /phandoan
-async def phandoan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📥 Gửi mã MD5 để bắt đầu phân tích.")
-    context.user_data['mode'] = 'phandoan'
+async def phan_tich(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📄 Gửi mã MD5 (32 ký tự) => cách => secret_key")
+    context.user_data['mode'] = 'phan_tich'
 
-# /dukien
-async def dukien(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    history = context.user_data.get('history', [])
-    await update.message.reply_text(smart_predict(history))
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔐 Gửi mật khẩu admin:")
+    context.user_data['mode'] = 'admin_login'
 
-# Xử lý tin nhắn
+async def tao_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in admin_ids:
+        key = f"key_{random.randint(10000,99999)}"
+        secret_keys.append(key)
+        await update.message.reply_text(f"🔑 Secret_key mới: {key}")
+    else:
+        await update.message.reply_text("❌ Bạn không phải admin!")
+
+# ========== Xu ly tin nhan ==========
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     text = update.message.text.strip()
     
-    if context.user_data.get('mode') == 'phandoan':
-        if 'md5' not in context.user_data:
-            if len(text) == 32 and all(c in '0123456789abcdef' for c in text.lower()):
-                context.user_data['md5'] = text
-                await update.message.reply_text("🔐 Gửi secret_key để bot phân tích...")
-            else:
-                await update.message.reply_text("⚠️ Vui lòng gửi mã MD5 hợp lệ (32 ký tự hex).")
+    if context.user_data.get('mode') == 'phan_tich':
+        if '=>' not in text:
+            await update.message.reply_text("⚠️ Vui lòng nhập theo định dạng: maMD5 => secret_key")
+            return
+        md5_code, key = [x.strip() for x in text.split('=>')]
+        if len(md5_code) != 32:
+            await update.message.reply_text("⚠️ Mã MD5 không hợp lệ")
+            return
+        await update.message.reply_text("⏳ Đang phân tích...")
+        result = phan_tich_md5(md5_code.lower(), key)
+        await update.message.reply_text(result)
+        context.user_data.clear()
+
+    elif context.user_data.get('mode') == 'admin_login':
+        if text == ADMIN_PASSWORD:
+            admin_ids.add(user_id)
+            await update.message.reply_text("✅ Đăng nhập admin thành công")
         else:
-            secret_key = text.strip()
-            await update.message.reply_text("⏳ Đang phân tích...")
-            result = crack_md5(context.user_data['md5'], secret_key)
-            await update.message.reply_text(result)
+            await update.message.reply_text("❌ Sai mật khẩu")
+        context.user_data.clear()
 
-            # Lưu lịch sử nếu giải thành công
-            if "Xúc xắc" in result:
-                lines = result.splitlines()
-                for line in lines:
-                    if "Tổng:" in line:
-                        try:
-                            total = int(line.split(":")[1].strip())
-                            history = context.user_data.get('history', [])
-                            history.append(total)
-                            if len(history) > 20:  # chỉ lưu 20 kết quả gần nhất
-                                history = history[-20:]
-                            context.user_data['history'] = history
-                        except: pass
-
-            context.user_data.clear()
     else:
-        await update.message.reply_text("📌 Hãy chọn chức năng bằng menu hoặc gõ /start.")
+        await update.message.reply_text("❓ Dùng /start để xem các lệnh hỗ trợ")
 
-# MAIN
+# ========== Main ==========
 if __name__ == '__main__':
-    TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # Thay bằng token của bạn
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("phantich", phandoan))
-    app.add_handler(CommandHandler("dukien", dukien))
+    app.add_handler(CommandHandler("phan_tich", phan_tich))
+    app.add_handler(CommandHandler("admin", admin))
+    app.add_handler(CommandHandler("tao_key", tao_key))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-    print("🤖 Bot Telegram tài/xỉu đang hoạt động...")
+    print("\U0001f680 Bot Tài/Xỉu Telegram đang chạy...")
     app.run_polling()
