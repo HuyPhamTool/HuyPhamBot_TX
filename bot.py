@@ -1,6 +1,13 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Updater, 
+    CommandHandler, 
+    CallbackQueryHandler, 
+    CallbackContext, 
+    MessageHandler, 
+    filters
+)
 import hashlib
 from datetime import datetime, timedelta
 import sqlite3
@@ -19,14 +26,14 @@ class Config:
     DB_FILE = 'taixiu_bot.db'
     
     # Cấu hình admin
-    ADMIN_IDS = [7505331567]  # Thay bằng ID admin của bạn
+    ADMIN_IDS = [123456789]  # Thay bằng ID admin của bạn
     
     # Thuật toán phân tích MD5
     ALGORITHMS = {
-        'simple': 'Easy Bot',
-        'advanced': 'Normal Bot',
-        'statistical': 'Pro Bot',
-        'hybrid': 'Bot siêu đẳng cấp đẹp trai như HUY PHẠM'
+        'simple': 'Phương pháp đơn giản (ký tự cuối)',
+        'advanced': 'Phương pháp nâng cao (phân tích tổng hợp)',
+        'statistical': 'Phương pháp thống kê (xu hướng)',
+        'hybrid': 'Phương pháp lai (kết hợp nhiều yếu tố)'
     }
     
     # Thời gian key mặc định
@@ -142,7 +149,7 @@ class MD5Analyzer:
         
         # Phân tích các phần của hash
         parts = [md5_hash[i:i+8] for i in range(0, 32, 8)]
-        sum_values = [sum(int(c, 16) for c in part) for part in parts]
+        sum_values = [sum(int(c, 16) for c in parts]
         avg_values = [s / 8 for s in sum_values]
         
         # Đếm số chẵn/lẻ
@@ -228,7 +235,7 @@ class MD5Analyzer:
             return results['advanced']
 
 # --------------------- Telegram Bot Handlers ---------------------
-async def start(update: Update, context: ContextTypes) -> None:
+def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     logger.info(f"User {user.id} started the bot")
     
@@ -254,7 +261,7 @@ async def start(update: Update, context: ContextTypes) -> None:
             [InlineKeyboardButton("⚙️ Cài đặt thuật toán", callback_data='algorithm_settings')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
+        update.message.reply_text(
             '🎲 Chào mừng bạn đến với bot phân tích Tài Xỉu!\n'
             '🔑 Bạn đang có key active. Vui lòng chọn chức năng:',
             reply_markup=reply_markup
@@ -263,47 +270,47 @@ async def start(update: Update, context: ContextTypes) -> None:
         # User không có key hoặc key hết hạn
         keyboard = [
             [InlineKeyboardButton("🔑 Nhập key", callback_data='enter_key')],
-            [InlineKeyboardButton("💳 Mua key", url='zalo: 0362.792.497')]
+            [InlineKeyboardButton("💳 Mua key", url='https://example.com')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
+        update.message.reply_text(
             '🎲 Chào mừng bạn đến với bot phân tích Tài Xỉu!\n'
             '🔐 Bạn cần có key để sử dụng dịch vụ. Vui lòng chọn:',
             reply_markup=reply_markup
         )
 
-async def button_handler(update: Update, context: ContextTypes) -> None:
+def button_handler(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    await query.answer()
+    query.answer()
     user_id = update.effective_user.id
     logger.info(f"Button pressed by {user_id}: {query.data}")
     
     if query.data == 'analyze_md5':
-        await query.edit_message_text(text="🔢 Vui lòng nhập mã MD5 để phân tích:")
+        query.edit_message_text(text="🔢 Vui lòng nhập mã MD5 để phân tích:")
         context.user_data['waiting_for_md5'] = True
     elif query.data == 'key_info':
-        await show_key_info(update, context)
+        show_key_info(update, context)
     elif query.data == 'enter_key':
-        await query.edit_message_text(text="🔑 Vui lòng nhập key của bạn:")
+        query.edit_message_text(text="🔑 Vui lòng nhập key của bạn:")
         context.user_data['waiting_for_key'] = True
     elif query.data == 'algorithm_settings':
-        await show_algorithm_settings(update, context)
+        show_algorithm_settings(update, context)
     elif query.data.startswith('set_algorithm_'):
         algorithm = query.data.split('_')[-1]
-        await set_algorithm(update, context, algorithm)
+        set_algorithm(update, context, algorithm)
     elif query.data == 'admin_panel' and user_id in Config.ADMIN_IDS:
-        await show_admin_panel(update, context)
+        show_admin_panel(update, context)
     elif query.data.startswith('admin_create_key_'):
         duration = query.data.split('_')[-1]
-        await create_key(update, context, duration)
+        create_key(update, context, duration)
     elif query.data == 'admin_manage_keys':
-        await show_key_management(update, context)
+        show_key_management(update, context)
     elif query.data == 'admin_user_stats':
-        await show_user_stats(update, context)
+        show_user_stats(update, context)
     elif query.data == 'back_to_menu':
-        await start_from_button(update, context)
+        start_from_button(update, context)
 
-async def start_from_button(update: Update, context: ContextTypes) -> None:
+def start_from_button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -317,22 +324,23 @@ async def start_from_button(update: Update, context: ContextTypes) -> None:
             [InlineKeyboardButton("⚙️ Cài đặt thuật toán", callback_data='algorithm_settings')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
+        query.edit_message_text(
             text='🎲 Menu chính - Chọn chức năng:',
             reply_markup=reply_markup
         )
     else:
         keyboard = [
             [InlineKeyboardButton("🔑 Nhập key", callback_data='enter_key')],
-            [InlineKeyboardButton("💳 Mua key", url='zalo: 0362.792.487')]
+            [InlineKeyboardButton("💳 Mua key", url='https://example.com')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
+        query.edit_message_text(
             text='🎲 Menu chính - Bạn cần có key để sử dụng dịch vụ:',
             reply_markup=reply_markup
         )
 
-async def analyze_md5(update: Update, context: ContextTypes) -> None:
+# --------------------- Chức năng phân tích MD5 ---------------------
+def analyze_md5(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     md5_input = update.message.text.strip().lower()
     logger.info(f"User {user.id} requested analysis for MD5: {md5_input}")
@@ -342,12 +350,12 @@ async def analyze_md5(update: Update, context: ContextTypes) -> None:
     user_data = db.cursor.fetchone()
     
     if not user_data or not user_data[0] or datetime.fromisoformat(user_data[1]) <= datetime.now():
-        await update.message.reply_text("⚠️ Bạn cần có key active để sử dụng chức năng này.")
+        update.message.reply_text("⚠️ Bạn cần có key active để sử dụng chức năng này.")
         return
     
     # Validate MD5
     if len(md5_input) != 32 or not all(c in '0123456789abcdef' for c in md5_input):
-        await update.message.reply_text("❌ Mã MD5 không hợp lệ. Vui lòng nhập lại.")
+        update.message.reply_text("❌ Mã MD5 không hợp lệ. Vui lòng nhập lại.")
         return
     
     # Lấy thuật toán đã chọn
@@ -370,20 +378,21 @@ async def analyze_md5(update: Update, context: ContextTypes) -> None:
         db.log_request(user.id, md5_input, prediction, algorithm)
         
         # Gửi kết quả
-        await update.message.reply_text(
+        update.message.reply_text(
             f"🎯 Kết quả phân tích:\n"
             f"🔢 MD5: <code>{md5_input}</code>\n"
             f"📊 Thuật toán: {Config.ALGORITHMS.get(algorithm, 'Đơn giản')}\n"
             f"🔮 Dự đoán: <b>{prediction}</b>\n\n"
-            f"📌 Lưu ý: Không đảm bảo 100% chính xác",
+            f"📌 Lưu ý: Đây chỉ là dự đoán, không đảm bảo 100% chính xác",
             parse_mode='HTML'
         )
         
     except Exception as e:
         logger.error(f"Error analyzing MD5: {str(e)}")
-        await update.message.reply_text("❌ Có lỗi xảy ra khi phân tích. Vui lòng thử lại.")
+        update.message.reply_text("❌ Có lỗi xảy ra khi phân tích. Vui lòng thử lại.")
 
-async def handle_key_input(update: Update, context: ContextTypes) -> None:
+# --------------------- Hệ thống key ---------------------
+def handle_key_input(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     key_input = update.message.text.strip()
     logger.info(f"User {user.id} attempting to activate key: {key_input}")
@@ -393,12 +402,12 @@ async def handle_key_input(update: Update, context: ContextTypes) -> None:
     key_data = db.cursor.fetchone()
     
     if not key_data:
-        await update.message.reply_text("❌ Key không hợp lệ hoặc đã được sử dụng.")
+        update.message.reply_text("❌ Key không hợp lệ hoặc đã được sử dụng.")
         return
     
     # Kiểm tra key đã được sử dụng chưa
     if key_data[5]:  # used_by
-        await update.message.reply_text("❌ Key này đã được sử dụng bởi người khác.")
+        update.message.reply_text("❌ Key này đã được sử dụng bởi người khác.")
         return
     
     # Tính toán ngày hết hạn
@@ -418,7 +427,7 @@ async def handle_key_input(update: Update, context: ContextTypes) -> None:
         
         db.conn.commit()
         
-        await update.message.reply_text(
+        update.message.reply_text(
             f"✅ Kích hoạt key thành công!\n"
             f"🔑 Key: <code>{key_input}</code>\n"
             f"⏳ Hết hạn vào: <b>{expiry_date.strftime('%Y-%m-%d %H:%M:%S')}</b>\n\n"
@@ -430,9 +439,9 @@ async def handle_key_input(update: Update, context: ContextTypes) -> None:
     except Exception as e:
         db.conn.rollback()
         logger.error(f"Error activating key: {str(e)}")
-        await update.message.reply_text("❌ Có lỗi xảy ra khi kích hoạt key. Vui lòng thử lại.")
+        update.message.reply_text("❌ Có lỗi xảy ra khi kích hoạt key. Vui lòng thử lại.")
 
-async def show_key_info(update: Update, context: ContextTypes) -> None:
+def show_key_info(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -464,13 +473,14 @@ async def show_key_info(update: Update, context: ContextTypes) -> None:
     keyboard = [[InlineKeyboardButton("🔙 Quay lại", callback_data='back_to_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text=message,
         reply_markup=reply_markup,
         parse_mode='HTML'
     )
 
-async def show_algorithm_settings(update: Update, context: ContextTypes) -> None:
+# --------------------- Cài đặt thuật toán ---------------------
+def show_algorithm_settings(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -488,17 +498,17 @@ async def show_algorithm_settings(update: Update, context: ContextTypes) -> None
     keyboard.append([InlineKeyboardButton("🔙 Quay lại", callback_data='back_to_menu')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text="⚙️ Chọn thuật toán phân tích MD5:",
         reply_markup=reply_markup
     )
 
-async def set_algorithm(update: Update, context: ContextTypes, algorithm: str) -> None:
+def set_algorithm(update: Update, context: CallbackContext, algorithm: str) -> None:
     query = update.callback_query
     user = update.effective_user
     
     if algorithm not in Config.ALGORITHMS:
-        await query.answer("❌ Thuật toán không hợp lệ", show_alert=True)
+        query.answer("❌ Thuật toán không hợp lệ", show_alert=True)
         return
     
     db.cursor.execute('''
@@ -506,10 +516,11 @@ async def set_algorithm(update: Update, context: ContextTypes, algorithm: str) -
     ''', (algorithm, user.id))
     db.conn.commit()
     
-    await query.answer(f"✅ Đã đặt thuật toán: {Config.ALGORITHMS[algorithm]}", show_alert=True)
-    await show_algorithm_settings(update, context)
+    query.answer(f"✅ Đã đặt thuật toán: {Config.ALGORITHMS[algorithm]}", show_alert=True)
+    show_algorithm_settings(update, context)
 
-async def show_admin_panel(update: Update, context: ContextTypes) -> None:
+# --------------------- Admin Functions ---------------------
+def show_admin_panel(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
     keyboard = [
@@ -521,12 +532,12 @@ async def show_admin_panel(update: Update, context: ContextTypes) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text="👑 Admin Panel - Chọn chức năng:",
         reply_markup=reply_markup
     )
 
-async def show_key_creation_menu(update: Update, context: ContextTypes) -> None:
+def show_key_creation_menu(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
     keyboard = []
@@ -541,17 +552,17 @@ async def show_key_creation_menu(update: Update, context: ContextTypes) -> None:
     keyboard.append([InlineKeyboardButton("🔙 Quay lại", callback_data='admin_panel')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text="🔑 Chọn loại key cần tạo:",
         reply_markup=reply_markup
     )
 
-async def create_key(update: Update, context: ContextTypes, duration: str) -> None:
+def create_key(update: Update, context: CallbackContext, duration: str) -> None:
     query = update.callback_query
     admin_id = update.effective_user.id
     
     if duration == 'custom':
-        await query.edit_message_text(text="🛠️ Vui lòng nhập thời hạn key (định dạng: <ngày> <giờ>, ví dụ: 3 12 cho 3 ngày 12 giờ):")
+        query.edit_message_text(text="🛠️ Vui lòng nhập thời hạn key (định dạng: <ngày> <giờ>, ví dụ: 3 12 cho 3 ngày 12 giờ):")
         context.user_data['waiting_for_custom_key_duration'] = True
         return
     
@@ -569,10 +580,10 @@ async def create_key(update: Update, context: ContextTypes, duration: str) -> No
     ''', (new_key, days, hours, datetime.now().isoformat(), admin_id, 1))
     db.conn.commit()
     
-    await query.answer(f"✅ Đã tạo key {days} ngày {hours} giờ: {new_key}", show_alert=True)
+    query.answer(f"✅ Đã tạo key {days} ngày {hours} giờ: {new_key}", show_alert=True)
     logger.info(f"Admin {admin_id} created new key: {new_key} ({days} days, {hours} hours)")
 
-async def handle_custom_key_duration(update: Update, context: ContextTypes) -> None:
+def handle_custom_key_duration(update: Update, context: CallbackContext) -> None:
     admin_id = update.effective_user.id
     text = update.message.text.strip()
     logger.info(f"Admin {admin_id} creating custom key with duration: {text}")
@@ -595,7 +606,7 @@ async def handle_custom_key_duration(update: Update, context: ContextTypes) -> N
         ''', (new_key, days, hours, datetime.now().isoformat(), admin_id, 1))
         db.conn.commit()
         
-        await update.message.reply_text(
+        update.message.reply_text(
             f"✅ Đã tạo key tùy chỉnh thành công!\n"
             f"🔑 Key: <code>{new_key}</code>\n"
             f"⏳ Thời hạn: {days} ngày {hours} giờ\n\n"
@@ -606,9 +617,9 @@ async def handle_custom_key_duration(update: Update, context: ContextTypes) -> N
         
     except Exception as e:
         logger.error(f"Error creating custom key: {str(e)}")
-        await update.message.reply_text("❌ Định dạng thời gian không hợp lệ. Vui lòng nhập lại (ví dụ: '3 12' cho 3 ngày 12 giờ).")
+        update.message.reply_text("❌ Định dạng thời gian không hợp lệ. Vui lòng nhập lại (ví dụ: '3 12' cho 3 ngày 12 giờ).")
 
-async def show_key_management(update: Update, context: ContextTypes) -> None:
+def show_key_management(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
     # Lấy danh sách key
@@ -621,7 +632,7 @@ async def show_key_management(update: Update, context: ContextTypes) -> None:
     keys = db.cursor.fetchall()
     
     if not keys:
-        await query.edit_message_text(text="📭 Không có key nào trong database.")
+        query.edit_message_text(text="📭 Không có key nào trong database.")
         return
     
     message = "🔑 Danh sách key (50 mới nhất):\n\n"
@@ -637,13 +648,13 @@ async def show_key_management(update: Update, context: ContextTypes) -> None:
     keyboard = [[InlineKeyboardButton("🔙 Quay lại", callback_data='admin_panel')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text=message,
         reply_markup=reply_markup,
         parse_mode='HTML'
     )
 
-async def show_user_stats(update: Update, context: ContextTypes) -> None:
+def show_user_stats(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     
     # Thống kê user
@@ -679,47 +690,49 @@ async def show_user_stats(update: Update, context: ContextTypes) -> None:
     keyboard = [[InlineKeyboardButton("🔙 Quay lại", callback_data='admin_panel')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
+    query.edit_message_text(
         text=message,
         reply_markup=reply_markup
     )
 
-async def handle_message(update: Update, context: ContextTypes) -> None:
+# --------------------- Main Handler ---------------------
+def handle_message(update: Update, context: CallbackContext) -> None:
     if context.user_data.get('waiting_for_md5'):
         context.user_data.pop('waiting_for_md5', None)
-        await analyze_md5(update, context)
+        analyze_md5(update, context)
     elif context.user_data.get('waiting_for_key'):
         context.user_data.pop('waiting_for_key', None)
-        await handle_key_input(update, context)
+        handle_key_input(update, context)
     elif context.user_data.get('waiting_for_custom_key_duration'):
         context.user_data.pop('waiting_for_custom_key_duration', None)
-        await handle_custom_key_duration(update, context)
+        handle_custom_key_duration(update, context)
     else:
-        await update.message.reply_text("ℹ️ Vui lòng sử dụng các nút chức năng hoặc gõ /start để bắt đầu.")
+        update.message.reply_text("ℹ️ Vui lòng sử dụng các nút chức năng hoặc gõ /start để bắt đầu.")
 
-async def error_handler(update: Update, context: ContextTypes) -> None:
+def error_handler(update: Update, context: CallbackContext) -> None:
     logger.error(msg="Exception while handling update:", exc_info=context.error)
     
     if update and update.effective_message:
-        await update.effective_message.reply_text(
+        update.effective_message.reply_text(
             "❌ Có lỗi xảy ra. Vui lòng thử lại hoặc liên hệ admin."
         )
 
 # --------------------- Khởi chạy bot ---------------------
 def main() -> None:
-    # Tạo application
-    application = Application.builder().token("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8").build()
+    # Tạo updater và dispatcher
+    updater = Updater("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8", use_context=True)
+    dispatcher = updater.dispatcher
 
     # Thêm các handler
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(CallbackQueryHandler(button_handler, pattern='admin_view_logs'))
-    application.add_error_handler(error_handler)
-
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    dispatcher.add_error_handler(error_handler)
+    
     # Khởi chạy bot
     logger.info("Bot is starting...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
