@@ -33,8 +33,7 @@ class Config:
     KEY_DURATIONS = {
         '1': {'days': 1, 'hours': 0, 'label': '1 ngày'},
         '3': {'days': 3, 'hours': 0, 'label': '3 ngày'},
-        '7': {'days':  бот
-7, 'hours': 0, 'label': '1 tuần'},
+        '7': {'days': 7, 'hours': 0, 'label': '1 tuần'},
         '30': {'days': 30, 'hours': 0, 'label': '1 tháng'},
         'custom': {'days': 0, 'hours': 0, 'label': 'Tùy chỉnh'}
     }
