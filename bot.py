@@ -713,7 +713,7 @@ def error_handler(update: Update, context: ContextTypes) -> None:
 # --------------------- Khởi chạy bot ---------------------
 def main() -> None:
     # Tạo application
-    application = Application.builder().token("7691809060:AAFBBz-2yEQmwNN3mfZAAJoUOnJ9MhLLr6U").build()
+    application = Application.builder().token("7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8").build()
 
     # Thêm các handler
     application.add_handler(CommandHandler("start", start))
