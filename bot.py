@@ -18,16 +18,21 @@ admin_ids = set()  # Luu ID cua admin da dang nhap
 def md5_hash(s):
     return hashlib.md5(s.encode()).hexdigest()
 
-def phan_tich_md5_chuyen_sau(md5_str):
+def phan_tich_md5(md5_code):
     try:
-        hex_str = md5_str[-5:]  # lấy 5 ký tự cuối
-        decimal = int(hex_str, 16)
-        digits = [int(d) for d in str(decimal)[-3:]]  # lấy 3 số cuối
-        total = sum(digits)
-        ket_qua = "Tài" if total >= 11 else "Xỉu"
-        return f"🔎 Tổng 3 số cuối ({'+'.join(map(str, digits))}) = {total} → 🎯 {ket_qua}"
+        hex_part = md5_code[-5:]  # lấy 5 ký tự cuối
+        decimal = int(hex_part, 16)  # chuyển sang hệ 10
+        last_digits = [int(x) for x in str(decimal)[-3:]]  # 3 số cuối
+        total = sum(last_digits)
+        result = "Tài" if total >= 11 else "Xỉu"
+        return (
+            f"🔍 Phân tích MD5: {md5_code}\n"
+            f"📦 Hex cuối: {hex_part} → {decimal}\n"
+            f"🎲 3 số cuối: {' + '.join(map(str, last_digits))} = {total}\n"
+            f"🎯 Kết quả: {result}"
+        )
     except:
-        return "⚠️ Mã MD5 không hợp lệ hoặc không thể phân tích."
+        return "⚠️ Không thể phân tích mã MD5. Hãy kiểm tra lại."
 
 
 # ========== Xu ly lenh ==========
