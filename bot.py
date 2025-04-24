@@ -149,7 +149,7 @@ class MD5Analyzer:
         
         # Phân tích các phần của hash
         parts = [md5_hash[i:i+8] for i in range(0, 32, 8)]
-        sum_values = [sum(int(c, 16) for c in parts]
+        sum_values = [sum(int(c, 16) for c in parts)]
         avg_values = [s / 8 for s in sum_values]
         
         # Đếm số chẵn/lẻ
