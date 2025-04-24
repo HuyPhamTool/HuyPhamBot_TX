@@ -1,108 +1,136 @@
 import logging
-from telegram import Update
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
-    ContextTypes, filters
+    ApplicationBuilder, CommandHandler, ContextTypes,
+    MessageHandler, filters, CallbackQueryHandler
 )
 
-# Thiết lập log
 logging.basicConfig(level=logging.INFO)
+TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8
+"  # ← Thay bằng token thật
+ADMIN_ID = 7505331567       # ← Thay bằng Telegram user ID của admin
 
-# Token bot Telegram
-TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"
-
-# Danh sách user đã được admin kích hoạt
+# Danh sách user được kích hoạt
 authorized_users = set()
 
-# Thống kê cá nhân: {user_id: {"win": int, "lose": int}}
+# Thống kê user
 user_stats = {}
 
-# ID của Admin
-ADMIN_ID = 7505331567  
-
-# Hàm phân tích MD5 ra Tài/Xỉu
-def analyze_md5(md5: str) -> (str, int):
+# Thuật toán chuẩn chuyển MD5 thành Tài/Xỉu (tổng max 18)
+def md5_to_tai_xiu(md5: str) -> (str, int):
     try:
-        hex_part = md5[-5:]
-        decimal = int(hex_part, 16)
-        digits = [int(d) for d in str(decimal)[-3:]]
-        total = sum(digits)
+        # Chuẩn hóa về chữ thường, lấy 3 cụm cuối
+        md5 = md5.lower()
+        group = [md5[i:i+2] for i in range(0, len(md5), 2)][-3:]
+        numbers = [int(i, 16) for i in group]
+        total = sum(numbers) % 14 + 3  # Tài/Xỉu từ 3 đến 18
         result = "Tài" if total >= 11 else "Xỉu"
         return result, total
     except:
         return "Lỗi", 0
 
-# Xử lý lệnh /start
+# Lệnh /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in authorized_users:
-        await update.message.reply_text(
-            "🔒 Bạn chưa được kích hoạt. Vui lòng chờ admin!"
-        )
-    else:
-        await update.message.reply_text("✅ Bạn đã được kích hoạt. Gửi mã MD5 để phân tích!")
+        await update.message.reply_text("🔒 Bạn chưa được admin kích hoạt.")
+        return
 
-# Lệnh cho admin: /active <user_id>
+    await update.message.reply_text(
+        "🎯 Gửi mã MD5 để phân tích kết quả Tài/Xỉu.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📊 Xem thống kê", callback_data="stats")]
+        ])
+    )
+
+# Lệnh /active (chỉ dành cho admin)
 async def active(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("🚫 Bạn không có quyền dùng lệnh này.")
+        await update.message.reply_text("⛔ Bạn không có quyền.")
         return
-
     try:
-        target_id = int(context.args[0])
-        authorized_users.add(target_id)
-        await update.message.reply_text(f"✅ Đã kích hoạt cho user ID: {target_id}")
+        target = int(context.args[0])
+        authorized_users.add(target)
+        await update.message.reply_text(f"✅ Đã kích hoạt user {target}")
     except:
-        await update.message.reply_text("❌ Lỗi! Dùng đúng cú pháp: /active <user_id>")
+        await update.message.reply_text("⚠️ Lỗi cú pháp. Dùng: /active <user_id>")
 
-# Phân tích MD5 khi người dùng gửi
+# Xử lý callback từ button
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    await query.answer()
+
+    if query.data == "stats":
+        stats = user_stats.get(user_id, {"win": 0, "lose": 0})
+        total = stats["win"] + stats["lose"]
+        win_rate = (stats["win"] / total) * 100 if total else 0
+        lose_rate = 100 - win_rate
+        suggestion = "📈 NÊN THEO!" if win_rate >= 60 else "📉 KHÔNG NÊN THEO!"
+
+        await query.edit_message_text(
+            f"📊 Thống kê cá nhân:\n"
+            f"🏆 Thắng (Tài): {stats['win']}\n"
+            f"💥 Thua (Xỉu): {stats['lose']}\n"
+            f"✅ Tỷ lệ thắng: {win_rate:.2f}%\n"
+            f"❌ Tỷ lệ thua: {lose_rate:.2f}%\n\n"
+            f"{suggestion}"
+        )
+
+# Phân tích MD5
 async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    text = update.message.text.strip()
+    text = update.message.text.strip().lower()
 
     if user_id not in authorized_users:
-        await update.message.reply_text("❌ Bạn chưa được kích hoạt. Chờ admin duyệt.")
+        await update.message.reply_text("🚫 Bạn chưa được kích hoạt.")
         return
 
-    if len(text) != 32 or not all(c in "0123456789abcdef" for c in text.lower()):
-        await update.message.reply_text("⚠️ Mã MD5 không hợp lệ. Vui lòng gửi mã hợp lệ.")
+    if len(text) != 32 or not all(c in "0123456789abcdef" for c in text):
+        await update.message.reply_text("⚠️ Mã MD5 không hợp lệ.")
         return
 
-    result, total = analyze_md5(text)
+    result, total = md5_to_tai_xiu(text)
     if result == "Lỗi":
-        await update.message.reply_text("❌ Phân tích thất bại. Hãy thử lại.")
+        await update.message.reply_text("❌ Phân tích thất bại.")
         return
 
-    # Thống kê thắng/thua
+    # Cập nhật thống kê
     stats = user_stats.get(user_id, {"win": 0, "lose": 0})
     if result == "Tài":
         stats["win"] += 1
     else:
         stats["lose"] += 1
-
-    total_games = stats["win"] + stats["lose"]
-    win_rate = (stats["win"] / total_games) * 100 if total_games > 0 else 0
     user_stats[user_id] = stats
 
+    total_games = stats["win"] + stats["lose"]
+    win_rate = (stats["win"] / total_games) * 100 if total_games else 0
+    lose_rate = 100 - win_rate
+    suggestion = "✅ NÊN THEO!" if win_rate >= 60 else "⚠️ KHÔNG NÊN THEO!"
+
     await update.message.reply_text(
-        f"🎲 Mã MD5: {text}\n"
-        f"🔍 Tổng cuối: {total}\n"
-        f"🎯 Kết quả: {result}\n\n"
-        f"📊 Thống kê:\n"
-        f"- Tài: {stats['win']}\n"
-        f"- Xỉu: {stats['lose']}\n"
-        f"- Tỷ lệ thắng: {win_rate:.2f}%"
+        f"🔍 Phân tích mã: `{text}`\n"
+        f"➤ Tổng cuối: {total}\n"
+        f"🎲 Kết quả: *{result}*\n\n"
+        f"📊 Tỷ lệ thắng: {win_rate:.2f}%\n"
+        f"📉 Tỷ lệ thua: {lose_rate:.2f}%\n"
+        f"{suggestion}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📊 Thống kê", callback_data="stats")]
+        ])
     )
 
-# Khởi tạo bot
+# Main bot
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("active", active))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), analyze))
+    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze))
 
-    print("🤖 Bot đang chạy...")
+    print("🤖 Bot đã khởi động!")
     app.run_polling()
 
 if __name__ == "__main__":
