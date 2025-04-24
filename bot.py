@@ -8,7 +8,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 
 # ========== Cau hinh ==========
 BOT_TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # Thay bang token bot Telegram cua ban
-ADMIN_PASSWORD = "admin1234"   # Mat khau truy cap admin
+ADMIN_PASSWORD = "7505331567"   # Mat khau truy cap admin
 
 admin_ids = set()  # Luu ID cua admin da dang nhap
 secret_keys = []   # Danh sach cac secret_key da tao
