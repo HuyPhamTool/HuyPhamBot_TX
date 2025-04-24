@@ -10,6 +10,7 @@ admin_id = 7505331567  # Thay bằng Telegram user ID thật của bạn
 user_keys = {}
 
 # Phân tích mã MD5 ra Tài/Xỉu
+# Phân tích mã MD5 ra Tài/Xỉu
 def phan_tich_md5(md5_code):
     try:
         hex_part = md5_code[-5:]
@@ -25,6 +26,7 @@ def phan_tich_md5(md5_code):
         )
     except:
         return "⚠️ Mã MD5 không hợp lệ."
+
 
 # /start
 async def start(update: Update, context: CallbackContext):
