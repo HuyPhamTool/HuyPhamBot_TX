@@ -33,7 +33,8 @@ class Config:
     KEY_DURATIONS = {
         '1': {'days': 1, 'hours': 0, 'label': '1 ngày'},
         '3': {'days': 3, 'hours': 0, 'label': '3 ngày'},
-        '7': {'days': 7, 'hours': 0, 'label': '1 tuần'},
+        '7': {'days':  бот
+7, 'hours': 0, 'label': '1 tuần'},
         '30': {'days': 30, 'hours': 0, 'label': '1 tháng'},
         'custom': {'days': 0, 'hours': 0, 'label': 'Tùy chỉnh'}
     }
@@ -119,7 +120,7 @@ class Database:
         WHERE user_id = ?
         ''', (datetime.now().isoformat(), user_id))
         
-        self.conn.commit()  # Đã sửa lỗi cú pháp tại đây
+        self.conn.commit()
 
 db = Database()
 
@@ -228,7 +229,7 @@ class MD5Analyzer:
             return results['advanced']
 
 # --------------------- Telegram Bot Handlers ---------------------
-def start(update: Update, context: ContextTypes.DEFAULT) -> None:
+def start(update: Update, context: ContextTypes) -> None:
     user = update.effective_user
     logger.info(f"User {user.id} started the bot")
     
@@ -272,7 +273,7 @@ def start(update: Update, context: ContextTypes.DEFAULT) -> None:
             reply_markup=reply_markup
         )
 
-def button_handler(update: Update, context: ContextTypes.DEFAULT) -> None:
+def button_handler(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     query.answer()
     user_id = update.effective_user.id
@@ -303,7 +304,7 @@ def button_handler(update: Update, context: ContextTypes.DEFAULT) -> None:
     elif query.data == 'back_to_menu':
         start_from_button(update, context)
 
-def start_from_button(update: Update, context: ContextTypes.DEFAULT) -> None:
+def start_from_button(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -333,7 +334,7 @@ def start_from_button(update: Update, context: ContextTypes.DEFAULT) -> None:
         )
 
 # --------------------- Chức năng phân tích MD5 ---------------------
-def analyze_md5(update: Update, context: ContextTypes.DEFAULT) -> None:
+def analyze_md5(update: Update, context: ContextTypes) -> None:
     user = update.effective_user
     md5_input = update.message.text.strip().lower()
     logger.info(f"User {user.id} requested analysis for MD5: {md5_input}")
@@ -385,7 +386,7 @@ def analyze_md5(update: Update, context: ContextTypes.DEFAULT) -> None:
         update.message.reply_text("❌ Có lỗi xảy ra khi phân tích. Vui lòng thử lại.")
 
 # --------------------- Hệ thống key ---------------------
-def handle_key_input(update: Update, context: ContextTypes.DEFAULT) -> None:
+def handle_key_input(update: Update, context: ContextTypes) -> None:
     user = update.effective_user
     key_input = update.message.text.strip()
     logger.info(f"User {user.id} attempting to activate key: {key_input}")
@@ -434,7 +435,7 @@ def handle_key_input(update: Update, context: ContextTypes.DEFAULT) -> None:
         logger.error(f"Error activating key: {str(e)}")
         update.message.reply_text("❌ Có lỗi xảy ra khi kích hoạt key. Vui lòng thử lại.")
 
-def show_key_info(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_key_info(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -473,7 +474,7 @@ def show_key_info(update: Update, context: ContextTypes.DEFAULT) -> None:
     )
 
 # --------------------- Cài đặt thuật toán ---------------------
-def show_algorithm_settings(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_algorithm_settings(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -496,7 +497,7 @@ def show_algorithm_settings(update: Update, context: ContextTypes.DEFAULT) -> No
         reply_markup=reply_markup
     )
 
-def set_algorithm(update: Update, context: ContextTypes.DEFAULT, algorithm: str) -> None:
+def set_algorithm(update: Update, context: ContextTypes, algorithm: str) -> None:
     query = update.callback_query
     user = update.effective_user
     
@@ -513,7 +514,7 @@ def set_algorithm(update: Update, context: ContextTypes.DEFAULT, algorithm: str)
     show_algorithm_settings(update, context)
 
 # --------------------- Admin Functions ---------------------
-def show_admin_panel(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_admin_panel(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     
     keyboard = [
@@ -530,7 +531,7 @@ def show_admin_panel(update: Update, context: ContextTypes.DEFAULT) -> None:
         reply_markup=reply_markup
     )
 
-def show_key_creation_menu(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_key_creation_menu(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     
     keyboard = []
@@ -550,7 +551,7 @@ def show_key_creation_menu(update: Update, context: ContextTypes.DEFAULT) -> Non
         reply_markup=reply_markup
     )
 
-def create_key(update: Update, context: ContextTypes.DEFAULT, duration: str) -> None:
+def create_key(update: Update, context: ContextTypes, duration: str) -> None:
     query = update.callback_query
     admin_id = update.effective_user.id
     
@@ -576,7 +577,7 @@ def create_key(update: Update, context: ContextTypes.DEFAULT, duration: str) -> 
     query.answer(f"✅ Đã tạo key {days} ngày {hours} giờ: {new_key}", show_alert=True)
     logger.info(f"Admin {admin_id} created new key: {new_key} ({days} days, {hours} hours)")
 
-def handle_custom_key_duration(update: Update, context: ContextTypes.DEFAULT) -> None:
+def handle_custom_key_duration(update: Update, context: ContextTypes) -> None:
     admin_id = update.effective_user.id
     text = update.message.text.strip()
     logger.info(f"Admin {admin_id} creating custom key with duration: {text}")
@@ -612,7 +613,7 @@ def handle_custom_key_duration(update: Update, context: ContextTypes.DEFAULT) ->
         logger.error(f"Error creating custom key: {str(e)}")
         update.message.reply_text("❌ Định dạng thời gian không hợp lệ. Vui lòng nhập lại (ví dụ: '3 12' cho 3 ngày 12 giờ).")
 
-def show_key_management(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_key_management(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     
     # Lấy danh sách key
@@ -647,7 +648,7 @@ def show_key_management(update: Update, context: ContextTypes.DEFAULT) -> None:
         parse_mode='HTML'
     )
 
-def show_user_stats(update: Update, context: ContextTypes.DEFAULT) -> None:
+def show_user_stats(update: Update, context: ContextTypes) -> None:
     query = update.callback_query
     
     # Thống kê user
@@ -689,7 +690,7 @@ def show_user_stats(update: Update, context: ContextTypes.DEFAULT) -> None:
     )
 
 # --------------------- Main Handler ---------------------
-def handle_message(update: Update, context: ContextTypes.DEFAULT) -> None:
+def handle_message(update: Update, context: ContextTypes) -> None:
     if context.user_data.get('waiting_for_md5'):
         context.user_data.pop('waiting_for_md5', None)
         analyze_md5(update, context)
@@ -702,7 +703,7 @@ def handle_message(update: Update, context: ContextTypes.DEFAULT) -> None:
     else:
         update.message.reply_text("ℹ️ Vui lòng sử dụng các nút chức năng hoặc gõ /start để bắt đầu.")
 
-def error_handler(update: Update, context: ContextTypes.DEFAULT) -> None:
+def error_handler(update: Update, context: ContextTypes) -> None:
     logger.error(msg="Exception while handling update:", exc_info=context.error)
     
     if update and update.effective_message:
