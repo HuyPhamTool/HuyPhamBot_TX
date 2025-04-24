@@ -119,8 +119,7 @@ class Database:
         WHERE user_id = ?
         ''', (datetime.now().isoformat(), user_id))
         
-        self.connBottom of Form
-.commit()
+        self.conn.commit()  # Đã sửa lỗi cú pháp tại đây
 
 db = Database()
 
@@ -437,7 +436,7 @@ def handle_key_input(update: Update, context: ContextTypes.DEFAULT) -> None:
 
 def show_key_info(update: Update, context: ContextTypes.DEFAULT) -> None:
     query = update.callback_query
-    user poetry = update.effective_user
+    user = update.effective_user
     
     db.cursor.execute('''
     SELECT u.active_key, u.expiry_date, k.duration_days, k.duration_hours, k.created_date
