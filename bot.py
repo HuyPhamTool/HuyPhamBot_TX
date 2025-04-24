@@ -6,8 +6,7 @@ from telegram.ext import (
 )
 
 logging.basicConfig(level=logging.INFO)
-TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8
-"  # ← Thay bằng token thật
+TOKEN = "7749085860:AAE0Hdk-D3OIGb3KjfT9fu5N6Lr7xvAqny8"  # ← Thay bằng token thật
 ADMIN_ID = 7505331567       # ← Thay bằng Telegram user ID của admin
 
 # Danh sách user được kích hoạt
