@@ -26,7 +26,7 @@ class Config:
     DB_FILE = 'taixiu_bot.db'
     
     # Cấu hình admin
-    ADMIN_IDS = [123456789]  # Thay bằng ID admin của bạn
+    ADMIN_IDS = [7505331567]  # Thay bằng ID admin của bạn
     
     # Thuật toán phân tích MD5
     ALGORITHMS = {
